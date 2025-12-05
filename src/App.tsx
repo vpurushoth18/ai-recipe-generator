@@ -127,11 +127,104 @@
 // export default App;
 
 
-import { FormEvent, useState } from "react";
+// import { FormEvent, useState } from "react";
+// import { Loader } from "@aws-amplify/ui-react";
+// import "./App.css";
+// import { Amplify } from "aws-amplify";
+// import { generateClient } from "aws-amplify/data";
+// import outputs from "../amplify_outputs.json";
+
+// Amplify.configure(outputs);
+
+// const amplifyClient = generateClient<any>({
+//   authMode: "userPool",
+// });
+
+// function App() {
+//   const [result, setResult] = useState<string>("");
+//   const [loading, setLoading] = useState(false);
+
+//   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+//     event.preventDefault();
+//     setLoading(true);
+
+//     try {
+//       const formData = new FormData(event.currentTarget);
+//       const ingredientList = formData.get("ingredients")?.toString() || "";
+      
+//       const { data, errors } = await amplifyClient.queries.askBedrock({
+//         ingredients: [ingredientList],
+//       });
+
+//       if (!errors) {
+//         setResult(data?.body || "No data returned");
+//       } else {
+//         console.log(errors);
+//         setResult(errors[0]?.message || "Error generating recipe");
+//       }
+//     } catch (e) {
+//       alert(`An error occurred: ${e}`);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <div className="app-container">
+//       <div className="header-container">
+//         <h1 className="main-header">
+//           Meet Your Personal <br />
+//           <span className="highlight">Recipe AI</span>
+//         </h1>
+//         <p className="description">
+//           Simply type a few ingredients using the format ingredient1,
+//           ingredient2, etc., and Recipe AI will generate an all-new recipe on
+//           demand...
+//         </p>
+//       </div>
+//       <form onSubmit={onSubmit} className="form-container">
+//         <div className="search-container">
+//           <input
+//             type="text"
+//             className="wide-input"
+//             id="ingredients"
+//             name="ingredients"
+//             placeholder="Ingredient1, Ingredient2, Ingredient3,...etc"
+//           />
+//           <button type="submit" className="search-button">
+//             Generate
+//           </button>
+//         </div>
+//       </form>
+//       <div className="result-container">
+//         {loading ? (
+//           <div className="loader-container">
+//             <p>Generating your recipe...</p>
+//             <Loader size="large" />
+//             <Loader />
+//             <Loader />
+//           </div>
+//         ) : (
+//           result && (
+//             <div className="result">
+//               <p>{result}</p>
+//             </div>
+//           )
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default App;
+
+
+import { useState, type FormEvent } from "react"; // FIX 1: Added 'type' for FormEvent
 import { Loader } from "@aws-amplify/ui-react";
 import "./App.css";
 import { Amplify } from "aws-amplify";
 import { generateClient } from "aws-amplify/data";
+// @ts-ignore -- FIX 2: Ignore TS error if it can't resolve the JSON module
 import outputs from "../amplify_outputs.json";
 
 Amplify.configure(outputs);
@@ -152,17 +245,29 @@ function App() {
       const formData = new FormData(event.currentTarget);
       const ingredientList = formData.get("ingredients")?.toString() || "";
       
-      const { data, errors } = await amplifyClient.queries.askBedrock({
-        ingredients: [ingredientList],
-      });
+      console.log("Sending ingredients:", ingredientList);
 
-      if (!errors) {
-        setResult(data?.body || "No data returned");
+      // FIX 3: Cast response to 'any' to stop TypeScript from complaining about .data and .errors
+      const response = await amplifyClient.queries.askBedrock({
+        ingredients: [ingredientList],
+      }) as any;
+
+      console.log("Full API Response:", response);
+
+      const data = response?.data;
+      const errors = response?.errors;
+
+      if (errors && errors.length > 0) {
+        setResult(errors[0].message || "Error generating recipe");
+        console.error("API Errors:", errors);
+      } else if (data && data.body) {
+        setResult(data.body);
       } else {
-        console.log(errors);
-        setResult(errors[0]?.message || "Error generating recipe");
+        setResult("No recipe returned. Check the console for details.");
       }
+
     } catch (e) {
+      console.error("Crash Error:", e);
       alert(`An error occurred: ${e}`);
     } finally {
       setLoading(false);
